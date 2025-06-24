@@ -1,7 +1,53 @@
 from django.shortcuts import render,redirect
 from django.contrib import messages
 from .models import CurrentBalance, TrackingHistory, RequestLogs
+from django.contrib.auth.models import User
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
 # Create your views here.
+
+def login_view(request):
+    if request.method == "POST":
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        user = User.objects.filter(username = username)
+        if not user.exists():
+            messages.success(request, "Username not found") 
+            return redirect('/login/')
+        
+        user = authenticate(username = username , password = password)
+        if not user:
+            messages.success(request, "Incorrect password") 
+            return redirect('/login/')        
+        login(request , user)
+        return redirect('/')
+
+    return render(request , 'login.html')
+def register_view(request):
+    if request.method == "POST":
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        first_name = request.POST.get('first_name')
+        last_name = request.POST.get('last_name')
+
+        user = User.objects.filter(username = username)
+        if user.exists():
+            messages.success(request, "Username is already taken") 
+            return redirect('/register/')
+        
+        user = User.objects.create(
+            username = username,
+            first_name = first_name,
+            last_name=last_name
+        )
+        user.set_password(password)
+        user.save()
+        messages.success(request, "Account created") 
+        return redirect('/register/')
+    return render(request , 'register.html')
+
+
+@login_required(login_url='login_view')
 def index(request):
     """
     Render the index page of the Expense Tracker application.
@@ -55,3 +101,8 @@ def delete_transaction(request, id):
 
     tracking_history.delete()
     return redirect('/')
+
+
+def logout_view(request):
+    logout(request)
+    return redirect('/login/')
